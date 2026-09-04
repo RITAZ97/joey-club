@@ -3,6 +3,12 @@ import type { NextRequest } from 'next/server'
 import { getDb } from '@/lib/db'
 import { resources, sources } from '@/lib/db/schema'
 
+// Approved JoeySearch entries must be visible as soon as the public site next
+// loads. Keep this shared catalogue endpoint dynamic rather than serving a
+// cached snapshot from a prior deployment.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const keyword = searchParams.get('q')?.trim()
@@ -66,5 +72,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     .orderBy(desc(resources.createdAt))
     .limit(limit)
 
-  return Response.json({ data })
+  return Response.json(
+    { data },
+    { headers: { 'Cache-Control': 'no-store, max-age=0' } },
+  )
 }
