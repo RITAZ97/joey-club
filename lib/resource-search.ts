@@ -12,16 +12,17 @@ export const RESOURCE_SOURCE_WHITELIST = {
   earlyChildhoodAustralia: { name: 'Early Childhood Australia', domains: ['earlychildhoodaustralia.org.au'] },
   playgroupNsw: { name: 'Playgroup NSW', domains: ['playgroupnsw.org.au'] },
   cbeebies: { name: 'CBeebies', domains: ['cbeebies.com'] },
+  joeysearch: { name: 'JoeySearch verified resource', domains: ['joeyclub.local'] },
 } as const
 
 export type WhitelistedSourceId = keyof typeof RESOURCE_SOURCE_WHITELIST
 export type AgeStage = '0 - 3 yrs (Babies & Toddlers)' | '3 - 5 yrs (Kinders & Preschoolers)'
 export type Setting = 'Individual (1-on-1)' | 'Group'
-export type ActivityType = 'Arts & Crafts' | 'STEM' | 'Music & Movement' | 'Literacy & Storytelling' | 'Sensory & Messy Play' | 'Outdoor & Physical Play'
-export type Topic = 'First Nations Culture' | 'Cultures & Festivals' | 'Sustainability & Nature' | 'Social-Emotional Wellbeing'
-export type EylfOutcome = 'Outcome 1: Children have a strong sense of identity' | 'Outcome 2: Children are connected with and contribute to their world' | 'Outcome 3: Children have a strong sense of wellbeing' | 'Outcome 4: Children are confident and involved learners' | 'Outcome 5: Children are effective communicators'
-export type LearningArea = 'Social & Emotional Learning' | 'Language & Communication' | 'Cognition & Problem Solving' | 'Gross & Fine Motor Skills' | 'Creative Expressive Arts'
-export type ResourceFormat = 'Printable PDF / Worksheet' | 'Lesson Plan / Activity Guide' | 'Interactive Digital Game' | 'Video / Audio Resource' | 'Flashcards & Visual Cards'
+export type ActivityType = string
+export type Topic = string
+export type EylfOutcome = string
+export type LearningArea = string
+export type ResourceFormat = string
 
 export interface SearchResource {
   id: string

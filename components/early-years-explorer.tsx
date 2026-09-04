@@ -81,9 +81,9 @@ function asAllowedValue<T extends string>(value: string, allowed: readonly T[], 
   return allowed.includes(value as T) ? value as T : fallback
 }
 
-function inferLearningArea(resource: SourceLinkedApiResource, activityType: (typeof searchResourceActivityTypes)[number]): (typeof searchResourceLearningAreas)[number] {
+function inferLearningArea(resource: SourceLinkedApiResource, activityType: string): string {
   const searchableText = `${resource.title} ${resource.description} ${resource.topic}`.toLowerCase()
-  const typeArea: Partial<Record<(typeof searchResourceActivityTypes)[number], (typeof searchResourceLearningAreas)[number]>> = {
+  const typeArea: Partial<Record<string, string>> = {
     'Arts & Crafts': 'Creative Expressive Arts',
     STEM: 'Cognition & Problem Solving',
     'Music & Movement': 'Gross & Fine Motor Skills',
@@ -95,9 +95,7 @@ function inferLearningArea(resource: SourceLinkedApiResource, activityType: (typ
   // Imported records previously defaulted to Social & Emotional Learning when a
   // source did not expose a dedicated learning-area label. Prefer the activity
   // type in that situation so this filter describes what the child will do.
-  if (resource.learningArea !== 'Social & Emotional Learning') {
-    return asAllowedValue(resource.learningArea, searchResourceLearningAreas, typeArea[activityType] ?? 'Social & Emotional Learning')
-  }
+  if (resource.learningArea && resource.learningArea !== 'Social & Emotional Learning') return resource.learningArea
   if (/emotion|wellbeing|friendship|belonging|identity|kindness|self-regulation/.test(searchableText) && activityType === 'Literacy & Storytelling') {
     return 'Social & Emotional Learning'
   }
@@ -105,14 +103,12 @@ function inferLearningArea(resource: SourceLinkedApiResource, activityType: (typ
 }
 
 function asSearchResource(resource: SourceLinkedApiResource): SearchResource | null {
-  const source = sourceSlugToId[resource.sourceSlug]
-  if (source === undefined) return null
+  const source = sourceSlugToId[resource.sourceSlug] ?? 'joeysearch'
   const setting = /individual|one-to-one|at-home|family/i.test(resource.setting) ? 'Individual (1-on-1)' : 'Group'
-  const activityType = asAllowedValue(resource.activityType, searchResourceActivityTypes, 'Arts & Crafts')
+  const activityType = resource.activityType || 'Learning activity'
   const ageStage = asAllowedValue(resource.ageStage, searchResourceAgeStages, '3 - 5 yrs (Kinders & Preschoolers)')
-  const eylfOutcome = resource.eylfOutcome !== null && searchResourceEylfOutcomes.includes(resource.eylfOutcome as (typeof searchResourceEylfOutcomes)[number])
-    ? resource.eylfOutcome as (typeof searchResourceEylfOutcomes)[number]
-    : undefined
+  const rawEylfOutcome = resource.eylfOutcome
+  const eylfOutcome = rawEylfOutcome === null ? undefined : searchResourceEylfOutcomes.find((outcome) => outcome.startsWith(rawEylfOutcome))
 
   return {
     id: resource.id,
@@ -122,10 +118,10 @@ function asSearchResource(resource: SourceLinkedApiResource): SearchResource | n
     ageStage,
     setting: asAllowedValue(setting, searchResourceSettings, 'Group'),
     activityType,
-    topic: asAllowedValue(resource.topic, searchResourceTopics, 'Social-Emotional Wellbeing'),
+    topic: resource.topic || 'Social-Emotional Wellbeing',
     ...(eylfOutcome === undefined ? {} : { eylfOutcome }),
     learningArea: inferLearningArea(resource, activityType),
-    format: defaultResourceFormat,
+    format: resource.format || defaultResourceFormat,
     source,
     sourceUrl: resource.canonicalUrl,
     image: cardImageByActivityType[activityType] ?? '/cards/colour-sorting.png',

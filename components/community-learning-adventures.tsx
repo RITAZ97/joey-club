@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useState, type ReactElement } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Heart, MapPin, Navigation } from 'lucide-react'
 import { type UserMode, useResourceSearch } from '@/components/resource-search-context'
 import { type ActivityCard, useSavedItems } from '@/components/saved-items'
@@ -36,6 +36,8 @@ interface Adventure {
   image: string
   category: string
   tags: readonly string[]
+  url?: string
+  location?: string
 }
 
 interface AdventureSection {
@@ -111,6 +113,33 @@ const educatorSections: readonly AdventureSection[] = [
 
 const pageSize = 4
 
+interface SourceLinkedAdventureResource {
+  id: string
+  title: string
+  description: string
+  canonicalUrl: string
+  activityType: string
+  topic: string
+  sourceName: string
+}
+
+const emptyDatabaseAdventures: Record<AdventureKind, Adventure[]> = { incursion: [], excursion: [], indoor: [], outdoor: [] }
+const adventureKindFor=(activityType:string):AdventureKind|null=>{
+  const value=activityType.toLowerCase()
+  if(value.includes('incursion'))return 'incursion'
+  if(value.includes('excursion'))return 'excursion'
+  if(value.includes('indoor'))return 'indoor'
+  if(value.includes('outdoor'))return 'outdoor'
+  return null
+}
+const databaseAdventure=(resource:SourceLinkedAdventureResource):{kind:AdventureKind;adventure:Adventure}|null=>{
+  const kind=adventureKindFor(resource.activityType)
+  if(!kind)return null
+  const category=kind==='excursion'&&/park|bush|nature|garden|outdoor/i.test(resource.title+' '+resource.description+' '+resource.topic)?'Parks & Bush Kinder':kind==='excursion'?'Other':kind==='incursion'?'Other':kind==='indoor'?'Other':'Other'
+  const image=kind==='excursion'||kind==='outdoor'?'/cards/nature-treasure.png':kind==='incursion'?'/cards/bubble-science.png':'/cards/colour-sorting.png'
+  return {kind,adventure:{id:'database-'+resource.id,title:resource.title,description:resource.description,image,category,tags:[resource.activityType,resource.topic],url:resource.canonicalUrl,location:resource.sourceName}}
+}
+
 interface ResourceRoute { title?: string; description?: string; tags?: readonly string[]; url: string; action: string; location: string; regionalRoutes?: Partial<Record<Region, { label: string; url: string }>> }
 const resourceRoutes: Record<string, ResourceRoute> = {
   sensory: { title: 'Twisted Science STEM Playcentre', description: 'Hands-on interactive science playrooms, birthday parties and indoor discovery for young curious minds.', tags: ['Indoor', 'STEM Play', 'Ages 0–5'], url: 'https://www.twistedscience.com.au/', action: 'Visit site', location: 'Multiple Victorian locations', regionalRoutes: { 'Melbourne CBD & Inner City': { label: 'Twisted Science Moorabbin', url: 'https://www.twistedscience.com.au/about-us/accessibility/melbourne/' }, 'Eastern Suburbs': { label: 'Twisted Science Moorabbin', url: 'https://www.twistedscience.com.au/about-us/accessibility/melbourne/' }, 'Inner West & Greater West': { label: 'Twisted Science Moorabbin', url: 'https://www.twistedscience.com.au/about-us/accessibility/melbourne/' }, 'North Shore & Northern Suburbs': { label: 'Twisted Science Moorabbin', url: 'https://www.twistedscience.com.au/about-us/accessibility/melbourne/' }, 'Mornington Peninsula & Regional Vic': { label: 'Twisted Science Echuca', url: 'https://www.twistedscience.com.au/' } } },
@@ -168,7 +197,9 @@ export function CommunityLearningAdventures(): ReactElement {
   const [stateCode, setStateCode] = useState<StateCode>('VIC')
   const [region, setRegion] = useState<Region>('All Regions')
   const [openRegion, setOpenRegion] = useState(false)
-  const sections = userMode === 'parent' ? parentSections : educatorSections
+  const [databaseAdventures,setDatabaseAdventures]=useState<Record<AdventureKind,Adventure[]>>(emptyDatabaseAdventures)
+  useEffect(()=>{let isCurrent=true;void fetch('/api/resources?limit=50').then(async response=>{if(!response.ok)throw new Error('Unable to load database adventures.');return response.json() as Promise<{data:SourceLinkedAdventureResource[]}>}).then(response=>{if(!isCurrent)return;const next:Record<AdventureKind,Adventure[]>={incursion:[],excursion:[],indoor:[],outdoor:[]};response.data.forEach(resource=>{const converted=databaseAdventure(resource);if(converted)next[converted.kind].push(converted.adventure)});setDatabaseAdventures(next)}).catch(()=>{if(isCurrent)setDatabaseAdventures(emptyDatabaseAdventures)});return()=>{isCurrent=false}},[])
+  const sections = (userMode === 'parent' ? parentSections : educatorSections).map((section)=>({...section,adventures:[...databaseAdventures[section.id],...section.adventures]}))
   const selectedRegion = region
 
   const setMode = (mode: UserMode): void => {
@@ -235,14 +266,14 @@ function FilterChoice({ active, onClick, children }: FilterChoiceProps): ReactEl
 
 interface AdventureCardProps { adventure: Adventure; selectedRegion: Region; stateCode: StateCode; saved: boolean; onToggleSaved: () => void }
 function AdventureCard({ adventure, selectedRegion, stateCode, saved, onToggleSaved }: AdventureCardProps): ReactElement {
-  const route = resourceRoutes[adventure.id]
+  const route = resourceRoutes[adventure.id] ?? (adventure.url ? { title: adventure.title, description: adventure.description, tags: adventure.tags, url: adventure.url, action: 'Visit site', location: adventure.location ?? stateCode } : undefined)
   const locationRoute = route?.regionalRoutes?.[selectedRegion]
   const title = route?.title ?? adventure.title
   const description = route?.description ?? adventure.description
   const tags = route?.tags ?? adventure.tags
   const url = locationRoute?.url ?? route?.url ?? 'https://www.twinkl.com.au/'
-  const action = 'Visit site'
-  return <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_14px_30px_-24px_rgba(63,81,54,0.45)] sm:rounded-3xl"><div className="relative aspect-[4/3] bg-cream"><Image src={adventure.image} alt="" fill className="object-cover" /><a href={url} target="_blank" rel="noreferrer" className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[0.75rem] font-bold text-primary-foreground transition-colors hover:bg-brand-dark">{action}<ExternalLink className="size-3.5" aria-hidden /></a><button type="button" onClick={onToggleSaved} aria-label={saved ? `Remove ${title} from saved adventures` : `Save ${title}`} aria-pressed={saved} className="absolute bottom-3 right-3 inline-flex size-8 items-center justify-center rounded-full border border-border bg-card text-primary transition-colors hover:bg-muted"><Heart className={`size-4 ${saved ? 'fill-primary' : ''}`} /></button></div><div className="flex flex-1 flex-col p-2 sm:p-2.5"><h4 className="min-h-[2.5rem] line-clamp-2 font-display text-[1.05rem] font-bold leading-tight text-brand-dark">{title}</h4><p className="mt-1 inline-flex items-center gap-1 text-[0.72rem] font-semibold text-primary"><MapPin className="size-3.5" aria-hidden />{stateCode}</p><p className="mt-2 min-h-[2.75rem] line-clamp-2 text-[0.84rem] leading-relaxed text-muted-foreground">{description}</p><div className="mt-3 overflow-hidden border-t border-border pt-3"><div className="flex flex-nowrap gap-1.5">{tags.slice(0, 3).map((tag, index) => <span key={tag} className={`min-w-0 truncate whitespace-nowrap rounded-full px-2.5 py-1 text-[0.68rem] font-semibold leading-snug ${index === 0 ? 'bg-badge-green text-badge-green-foreground' : index === 1 ? 'bg-badge-yellow text-badge-yellow-foreground' : 'bg-[#F2C2B4] text-[#7b473e]'}`}>{tag}</span>)}</div></div></div></article>
+  const action = route?.action ?? 'Visit site'
+  return <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[0_14px_30px_-24px_rgba(63,81,54,0.45)] sm:rounded-3xl"><div className="relative aspect-[4/3] bg-cream"><Image src={adventure.image} alt="" fill className="object-cover" /><a href={url} target="_blank" rel="noreferrer" className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[0.75rem] font-bold text-primary-foreground transition-colors hover:bg-brand-dark">{action}<ExternalLink className="size-3.5" aria-hidden /></a><button type="button" onClick={onToggleSaved} aria-label={saved ? `Remove ${title} from saved adventures` : `Save ${title}`} aria-pressed={saved} className={`absolute bottom-3 right-3 inline-flex size-8 items-center justify-center rounded-full border border-border bg-card text-primary transition-colors hover:bg-muted`}><Heart className={`size-4 ${saved ? 'fill-primary' : ''}`} /></button></div><div className="flex flex-1 flex-col p-2 sm:p-2.5"><h4 className="min-h-[2.5rem] line-clamp-2 font-display text-[1.05rem] font-bold leading-tight text-brand-dark">{title}</h4><p className="mt-1 inline-flex items-center gap-1 text-[0.72rem] font-semibold text-primary"><MapPin className="size-3.5" aria-hidden />{route?.location ?? stateCode}</p><p className="mt-2 min-h-[2.75rem] line-clamp-2 text-[0.84rem] leading-relaxed text-muted-foreground">{description}</p><div className="mt-3 overflow-hidden border-t border-border pt-3"><div className="flex flex-nowrap gap-1.5">{tags.slice(0, 3).map((tag, index) => <span key={tag} className={`min-w-0 truncate whitespace-nowrap rounded-full px-2.5 py-1 text-[0.68rem] font-semibold leading-snug ${index === 0 ? 'bg-badge-green text-badge-green-foreground' : index === 1 ? 'bg-badge-yellow text-badge-yellow-foreground' : 'bg-[#F2C2B4] text-[#7b473e]'}`}>{tag}</span>)}</div></div></div></article>
 }
 
 interface PaginationProps { currentPage: number; totalPages: number; onChange: (page: number) => void }
