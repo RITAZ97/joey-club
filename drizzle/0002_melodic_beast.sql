@@ -1,0 +1,1 @@
+ALTER TABLE "resources" ALTER COLUMN "eylf_outcome" DROP NOT NULL;

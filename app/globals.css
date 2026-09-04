@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-baloo), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-dark: var(--brand-dark);
+  --color-badge-green: var(--badge-green);
+  --color-badge-green-foreground: var(--badge-green-foreground);
+  --color-badge-yellow: var(--badge-yellow);
+  --color-badge-yellow-foreground: var(--badge-yellow-foreground);
+  --color-cream: var(--cream);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.875rem;
+
+  --background: #fdfaf6;
+  --foreground: #2b3a2d;
+  --cream: #fdfaf6;
+
+  --card: #ffffff;
+  --card-foreground: #2b3a2d;
+  --popover: #ffffff;
+  --popover-foreground: #2b3a2d;
+
+  --primary: #7a997d;
+  --primary-foreground: #fbfcf8;
+  --secondary: #ecebe1;
+  --secondary-foreground: #3c4a3d;
+  --muted: #edece2;
+  --muted-foreground: #6c7568;
+  --accent: #dde7d0;
+  --accent-foreground: #3c4a3d;
+  --destructive: #c0553b;
+
+  --border: #e3e1d5;
+  --input: #e0ddcf;
+  --ring: #7a997d;
+
+  --brand: #7a997d;
+  --brand-foreground: #fbfcf8;
+  --brand-dark: #3f5136;
+  --badge-green: #dbe6cd;
+  --badge-green-foreground: #4a5a3c;
+  --badge-yellow: #ecdba2;
+  --badge-yellow-foreground: #6e5c2a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .auth-field {
+    @apply h-11 w-full appearance-none rounded-lg border border-input bg-card px-3.5 text-[0.95rem] font-medium text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15;
+  }
+}
