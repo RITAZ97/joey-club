@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Baloo_2, Nunito } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth-context'
+import { SaveAuthPrompt } from '@/components/save-auth-prompt'
 import { SavedItemsProvider } from '@/components/saved-items'
 import { SaveToFolderDialog } from '@/components/save-to-folder-dialog'
 import { UnsaveConfirmationDialog } from '@/components/unsave-confirmation-dialog'
@@ -42,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`bg-background ${baloo.variable} ${nunito.variable}`}>
       <body className="font-sans antialiased">
-        <AuthProvider><SavedItemsProvider>{children}<SaveToFolderDialog /><UnsaveConfirmationDialog /></SavedItemsProvider></AuthProvider>
+        <AuthProvider><SavedItemsProvider>{children}<SaveToFolderDialog /><UnsaveConfirmationDialog /><SaveAuthPrompt /></SavedItemsProvider></AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

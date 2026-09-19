@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react'
+import { useAuth } from '@/components/auth-context'
 
 export type SavedContentType = 'activity' | 'eylf' | 'theme'
 export type SavedEnvironment = 'Indoor' | 'Outdoor' | 'Mixed'
@@ -100,6 +101,8 @@ interface SavedItemsContextValue {
   hydrated: boolean
   storageWarning: string | null
   dismissStorageWarning: () => void
+  authPromptOpen: boolean
+  dismissAuthPrompt: () => void
   isFoldersOpen: boolean
   setFoldersOpen: (open: boolean) => void
   isActivitySaved: (id: string) => boolean
@@ -130,9 +133,11 @@ function folderKey(type: SavedContentType): 'activities' | 'eylfOutcomes' | 'lea
 }
 
 export function SavedItemsProvider({ children }: { children: ReactNode }): ReactElement {
+  const { user } = useAuth()
   const [folders, setFolders] = useState<UserSavedFolders>(emptyFolders)
   const [hydrated, setHydrated] = useState(false)
   const [storageWarning, setStorageWarning] = useState<string | null>(null)
+  const [authPromptOpen, setAuthPromptOpen] = useState(false)
   const [isFoldersOpen, setFoldersOpen] = useState(false)
   const [pendingActivity, setPendingActivity] = useState<SavedItem | null>(null)
   const [pendingUnsaveActivity, setPendingUnsaveActivity] = useState<SavedItem | null>(null)
@@ -162,10 +167,12 @@ export function SavedItemsProvider({ children }: { children: ReactNode }): React
     }
   }, [folders, hydrated])
   const dismissStorageWarning = useCallback(() => setStorageWarning(null), [])
+  const dismissAuthPrompt = useCallback(() => setAuthPromptOpen(false), [])
 
   const isActivitySaved = useCallback((id: string) => folders.activities.some((item) => item.id === id), [folders.activities])
   const isTagSaved = useCallback((type: 'eylf' | 'theme', id: string) => folders[folderKey(type)].some((item) => item.id === id), [folders])
   const toggleSaveActivity = useCallback((activity: ActivityCard) => {
+    if (!user) { setAuthPromptOpen(true); return }
     const existing = folders.activities.find((item) => item.id === activity.id)
     if (existing) {
       setPendingUnsaveActivity(existing)
@@ -175,7 +182,7 @@ export function SavedItemsProvider({ children }: { children: ReactNode }): React
     const savedItem: SavedItem = { id, type: 'activity', title, description, image, sourceUrl, environment, ageGroup, eylfOutcomes, tags, origin, sourceName, ageLabel, eylfDetail, location, activityType, topic, documents, savedAt: new Date().toISOString() }
     setPendingActivity(savedItem)
     setFolders((current) => current.activities.some((item) => item.id === activity.id) ? current : { ...current, activities: [...current.activities, savedItem], custom: { ...current.custom, [DEFAULT_FOLDER]: [...(current.custom[DEFAULT_FOLDER] ?? []), savedItem] } })
-  }, [folders.activities])
+  }, [folders.activities, user])
   const addGeneratedActivity = useCallback((activity: ActivityCard, folderName = DEFAULT_FOLDER) => {
     const savedItem: SavedItem = { ...activity, type: 'activity', savedAt: new Date().toISOString() }
     setFolders((current) => {
@@ -186,13 +193,14 @@ export function SavedItemsProvider({ children }: { children: ReactNode }): React
     })
   }, [])
   const toggleSaveTag = useCallback((type: 'eylf' | 'theme', item: Omit<SavedItem, 'type' | 'savedAt'>) => {
+    if (!user) { setAuthPromptOpen(true); return }
     setFolders((current) => {
       const key = folderKey(type)
       const items = current[key]
       if (items.some((saved) => saved.id === item.id)) return { ...current, [key]: items.filter((saved) => saved.id !== item.id) }
       return { ...current, [key]: [...items, { ...item, type, savedAt: new Date().toISOString() }] }
     })
-  }, [])
+  }, [user])
   const removeSavedItem = useCallback((item: SavedItem) => {
     const key = folderKey(item.type)
     setFolders((current) => ({ ...current, [key]: current[key].filter((saved) => saved.id !== item.id), custom: Object.fromEntries(Object.entries(current.custom).map(([name, saved]) => [name, saved.filter((saved) => saved.id !== item.id)])) }))
@@ -236,7 +244,7 @@ export function SavedItemsProvider({ children }: { children: ReactNode }): React
   }, [pendingUnsaveActivity])
   const dismissUnsaveActivity = useCallback(() => setPendingUnsaveActivity(null), [])
 
-  const value = useMemo(() => ({ folders, hydrated, storageWarning, dismissStorageWarning, isFoldersOpen, setFoldersOpen, isActivitySaved, isTagSaved, toggleSaveActivity, addGeneratedActivity, toggleSaveTag, removeSavedItem, createFolder, toggleItemInFolder, renameFolder, deleteFolder, pendingActivity, assignPendingActivity, dismissPendingActivity, pendingUnsaveActivity, confirmUnsaveActivity, dismissUnsaveActivity }), [folders, hydrated, storageWarning, dismissStorageWarning, isFoldersOpen, isActivitySaved, isTagSaved, toggleSaveActivity, addGeneratedActivity, toggleSaveTag, removeSavedItem, createFolder, toggleItemInFolder, renameFolder, deleteFolder, pendingActivity, assignPendingActivity, dismissPendingActivity, pendingUnsaveActivity, confirmUnsaveActivity, dismissUnsaveActivity])
+  const value = useMemo(() => ({ folders, hydrated, storageWarning, dismissStorageWarning, authPromptOpen, dismissAuthPrompt, isFoldersOpen, setFoldersOpen, isActivitySaved, isTagSaved, toggleSaveActivity, addGeneratedActivity, toggleSaveTag, removeSavedItem, createFolder, toggleItemInFolder, renameFolder, deleteFolder, pendingActivity, assignPendingActivity, dismissPendingActivity, pendingUnsaveActivity, confirmUnsaveActivity, dismissUnsaveActivity }), [folders, hydrated, storageWarning, dismissStorageWarning, authPromptOpen, dismissAuthPrompt, isFoldersOpen, isActivitySaved, isTagSaved, toggleSaveActivity, addGeneratedActivity, toggleSaveTag, removeSavedItem, createFolder, toggleItemInFolder, renameFolder, deleteFolder, pendingActivity, assignPendingActivity, dismissPendingActivity, pendingUnsaveActivity, confirmUnsaveActivity, dismissUnsaveActivity])
   return <SavedItemsContext.Provider value={value}>{children}</SavedItemsContext.Provider>
 }
 

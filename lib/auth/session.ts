@@ -58,6 +58,11 @@ export function createOpaqueToken(): string {
   return randomBytes(32).toString('base64url')
 }
 
+/** A short code a member reads from their inbox and types back in, rather than a link. */
+export function createVerificationCode(): string {
+  return randomBytes(4).readUInt32BE(0).toString().slice(-6).padStart(6, '0')
+}
+
 export async function createSession(userId: string): Promise<string> {
   const token = createOpaqueToken()
   const expiresAt = new Date(Date.now() + sessionDurationMs)

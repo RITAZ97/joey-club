@@ -226,18 +226,20 @@ function GeneratorModal({ folders, initialTab, editItem, initialFolder, onClose,
   const [providerName, setProviderName] = useState('')
   const [stateTerritory, setStateTerritory] = useState('')
   const [practicalFeatures, setPracticalFeatures] = useState<string[]>([])
-  const { user, refreshUser } = useAuth()
-  const [authPromptOpen, setAuthPromptOpen] = useState(false)
+  const { user, refreshUser, resendVerificationCode } = useAuth()
+  const [authPromptStep, setAuthPromptStep] = useState<'login' | 'verify-email' | null>(null)
+
+  const openVerifyEmail = (): void => { void resendVerificationCode(); setAuthPromptStep('verify-email') }
 
   const analyseLink = async (): Promise<void> => {
     if (!url.trim() || analysisState === 'loading') return
-    if (!user) { setAuthPromptOpen(true); return }
+    if (!user) { setAuthPromptStep('login'); return }
     setAnalysisState('loading'); setAnalysisMessage('Analysing the page and matching it to JoeyClub fields…')
     try {
       const response = await fetch('/api/activity-card-analysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.trim(), kind }) })
       const result = await response.json() as { error?: string; code?: string; title?: string; description?: string; activityType?: string; topic?: string; age?: string; eylfOutcome?: string | null; eylfDetail?: string; location?: string; providerName?: string; stateTerritory?: string; practicalFeatures?: string[]; analysisMode?: 'ai' | 'metadata'; confidenceScore?: number; reviewReason?: string; creditsRemaining?: number }
       if (!response.ok) {
-        if (result.code === 'auth_required') setAuthPromptOpen(true)
+        if (result.code === 'auth_required') setAuthPromptStep('login')
         throw new Error(result.error || 'The page could not be analysed.')
       }
       if (typeof result.creditsRemaining === 'number') void refreshUser()
@@ -309,7 +311,7 @@ function GeneratorModal({ folders, initialTab, editItem, initialFolder, onClose,
   }
 
   return <><div className="fixed inset-0 z-[95] overflow-y-auto bg-brand-dark/35 p-4 sm:p-8" role="dialog" aria-modal="true" aria-labelledby="generator-title"><div className="mx-auto w-full max-w-4xl rounded-[1.7rem] border border-border bg-background p-5 shadow-2xl sm:p-7">
-    <div className="flex items-start justify-between gap-4"><div><h2 id="generator-title" className="font-display text-2xl font-bold text-brand-dark">{editItem ? 'Edit my card' : 'Generate my activity card'}</h2><p className="mt-1 text-sm text-muted-foreground">Save a useful link or document an activity you created.</p>{user && (user.emailVerified ? <p className="mt-1 text-xs font-semibold text-primary">{user.credits} AI analysis credit{user.credits === 1 ? '' : 's'} left · beta cap, more ways to earn credits are coming soon</p> : <p className="mt-1 text-xs font-semibold text-[#A85C4D]">Verify your email to activate your 10 free AI analysis credits — check your inbox for the link.</p>)}</div><button type="button" onClick={onClose} aria-label="Close" className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card"><X className="size-4" /></button></div>
+    <div className="flex items-start justify-between gap-4"><div><h2 id="generator-title" className="font-display text-2xl font-bold text-brand-dark">{editItem ? 'Edit my card' : 'Generate my activity card'}</h2><p className="mt-1 text-sm text-muted-foreground">Save a useful link or document an activity you created.</p>{user && (user.emailVerified ? <p className="mt-1 text-xs font-semibold text-primary">{user.credits} AI analysis credit{user.credits === 1 ? '' : 's'} left · beta cap, more ways to earn credits are coming soon</p> : <button type="button" onClick={openVerifyEmail} className="mt-1 text-left text-xs font-semibold text-[#A85C4D] underline underline-offset-2 hover:text-brand-dark">Verify your email to activate your 10 free AI analysis credits</button>)}</div><button type="button" onClick={onClose} aria-label="Close" className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card"><X className="size-4" /></button></div>
     {!reviewing ? <>
       {origin === 'joeyclub' ? <div className="mx-auto mt-6 w-full rounded-2xl bg-[#DFEAD7] px-4 py-3 text-center sm:w-3/5"><span className="inline-flex items-center gap-2 text-sm font-bold text-[#51745B]"><ShieldCheck className="size-4" />JoeyClub official resource</span></div> : <div className="mx-auto mt-6 grid w-full grid-cols-2 gap-2 rounded-2xl bg-muted p-1.5 sm:w-3/5"><button type="button" onClick={() => setOrigin('web')} className={`rounded-xl px-4 py-3 text-sm font-bold ${origin === 'web' ? 'bg-[#F7E5A9] text-[#6F5918] shadow-sm' : 'text-muted-foreground'}`}><span className="inline-flex items-center gap-2"><Link2 className="size-4" />Web discovery</span></button><button type="button" onClick={() => setOrigin('created')} className={`rounded-xl px-4 py-3 text-sm font-bold ${origin === 'created' ? 'bg-[#D9ECF4] text-[#356A7B] shadow-sm' : 'text-muted-foreground'}`}><span className="inline-flex items-center gap-2"><FilePenLine className="size-4" />Create my own</span></button></div>}
       <div className="mt-6 grid items-end gap-4 sm:grid-cols-2"><Field label="Resource format"><div className="grid grid-cols-2 gap-2"><Choice active={kind === 'ideas'} onClick={() => setKind('ideas')}>Learning idea</Choice><Choice active={kind === 'outings'} onClick={() => setKind('outings')}>Outing / venue</Choice></div></Field><Select label="Save to folder" value={folder} options={folders.length ? folders : ['Default']} onChange={setFolder} /></div>
@@ -321,7 +323,7 @@ function GeneratorModal({ folders, initialTab, editItem, initialFolder, onClose,
       <div className="mt-7 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl px-4 py-3 text-sm font-bold text-muted-foreground">Cancel</button><button type="button" onClick={generate} disabled={origin === 'web' && !url.trim() && !title.trim()} className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground disabled:opacity-40">Generate preview</button></div>
     </> : <div className="mt-6"><p className="text-center text-sm font-bold text-brand-dark">Review your card</p><div className="mx-auto mt-3 w-full max-w-[460px]">{kind === 'ideas' ? <SavedLearningCard item={previewItem({ origin, kind, url, title, description, image, activityType, topic, age, eylf, eylfDetail, location, sourceName: editItem?.sourceName })} onRemove={() => undefined} preview /> : <SavedOutingCard item={previewItem({ origin, kind, url, title, description, image, activityType, topic, age, eylf, eylfDetail, location, sourceName: editItem?.sourceName })} onRemove={() => undefined} preview />}</div><div className="mt-7 flex justify-end gap-2"><button type="button" onClick={() => setReviewing(false)} className="rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-brand-dark">Edit / Back</button><button type="button" onClick={save} className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">Save to {folder}</button></div></div>}
   </div></div>
-  {authPromptOpen && <AuthModal initialMode="login" onClose={() => setAuthPromptOpen(false)} />}
+  {authPromptStep && <AuthModal initialMode={authPromptStep} onClose={() => setAuthPromptStep(null)} />}
   </>
 }
 

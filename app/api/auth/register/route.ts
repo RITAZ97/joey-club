@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { sendVerificationEmail } from '@/lib/auth/email'
-import { createOpaqueToken, createSession, hashPassword, hashToken, sessionCookieOptions } from '@/lib/auth/session'
+import { createSession, createVerificationCode, hashPassword, hashToken, sessionCookieOptions } from '@/lib/auth/session'
 import { isRecord, publicUser, readString } from '@/lib/auth/validation'
 import { getDb } from '@/lib/db'
 import { emailVerifications, userAccounts } from '@/lib/db/schema'
@@ -55,14 +55,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   // The 10 beta credits are granted on email verification instead of here —
   // see app/api/auth/verify-email/route.ts — so a script can't harvest them
   // just by POSTing throwaway addresses to this endpoint.
-  const verificationToken = createOpaqueToken()
+  const verificationCode = createVerificationCode()
   await db.insert(emailVerifications).values({
     userId: user.id,
-    tokenHash: hashToken(verificationToken),
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+    tokenHash: hashToken(verificationCode),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000),
   })
   try {
-    await sendVerificationEmail(user.email, verificationToken)
+    await sendVerificationEmail(user.email, verificationCode)
   } catch {
     // The account is still created if the email provider is temporarily unavailable.
   }

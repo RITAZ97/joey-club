@@ -32,12 +32,11 @@ async function sendEmail(message: EmailMessage): Promise<boolean> {
   return true
 }
 
-export async function sendVerificationEmail(email: string, token: string): Promise<boolean> {
-  const verifyUrl = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(token)}`
+export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    subject: 'Verify your JoeyClub email',
-    html: `<p>Welcome to JoeyClub.</p><p><a href="${verifyUrl}">Verify your email address</a> to finish securing your account.</p>`,
+    subject: 'Your JoeyClub verification code',
+    html: `<p>Welcome to JoeyClub.</p><p>Enter this code to verify your email and activate your 10 free beta credits:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px;">${code}</p><p>This code expires in 15 minutes.</p>`,
   })
 }
 

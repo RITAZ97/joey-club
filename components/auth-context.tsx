@@ -53,6 +53,8 @@ interface AuthContextValue {
   requestPasswordReset: (email: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  verifyEmail: (code: string) => Promise<AuthUser>
+  resendVerificationCode: () => Promise<void>
 }
 
 interface AuthProviderProps {
@@ -127,9 +129,20 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
     setUser(null)
   }, [])
 
+  const verifyEmail = useCallback(async (code: string): Promise<AuthUser> => {
+    const payload = await requestAuth('/api/auth/verify-email', { code })
+    if (!payload.user) throw new Error('We could not verify your email. Please try again.')
+    setUser(payload.user)
+    return payload.user
+  }, [])
+
+  const resendVerificationCode = useCallback(async (): Promise<void> => {
+    await requestAuth('/api/auth/resend-verification', {})
+  }, [])
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, register, login, completeOnboarding, skipOnboarding, requestPasswordReset, logout, refreshUser }),
-    [completeOnboarding, isLoading, login, logout, refreshUser, register, requestPasswordReset, skipOnboarding, user],
+    () => ({ user, isLoading, register, login, completeOnboarding, skipOnboarding, requestPasswordReset, logout, refreshUser, verifyEmail, resendVerificationCode }),
+    [completeOnboarding, isLoading, login, logout, refreshUser, register, requestPasswordReset, resendVerificationCode, skipOnboarding, user, verifyEmail],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
