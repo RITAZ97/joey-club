@@ -1,3 +1,5 @@
+import { getCreditBalance } from '@/lib/credits'
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -7,7 +9,7 @@ export function readString(payload: Record<string, unknown>, key: string): strin
   return typeof value === 'string' ? value.trim() : ''
 }
 
-export function publicUser(user: {
+export async function publicUser(user: {
   id: string
   firstName: string
   lastName: string | null
@@ -16,6 +18,8 @@ export function publicUser(user: {
   yearLevel: '0-3' | '3-5' | null
   country: string | null
   onboardingComplete: boolean
+  emailVerifiedAt: Date | null
 }) {
-  return user
+  const { emailVerifiedAt, ...rest } = user
+  return { ...rest, emailVerified: emailVerifiedAt !== null, credits: await getCreditBalance(user.id) }
 }

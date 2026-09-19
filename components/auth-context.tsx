@@ -15,6 +15,8 @@ export interface AuthUser {
   yearLevel: YearLevel | null
   country: string | null
   onboardingComplete: boolean
+  credits: number
+  emailVerified: boolean
 }
 
 export interface RegisterInput {
@@ -50,6 +52,7 @@ interface AuthContextValue {
   skipOnboarding: () => Promise<AuthUser>
   requestPasswordReset: (email: string) => Promise<void>
   logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 interface AuthProviderProps {
@@ -72,6 +75,11 @@ async function requestAuth(path: string, body?: object): Promise<AuthResponse> {
 export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  const refreshUser = useCallback(async (): Promise<void> => {
+    const payload = await requestAuth('/api/auth/session').catch(() => ({ user: undefined }) as AuthResponse)
+    setUser(payload.user ?? null)
+  }, [])
 
   useEffect(() => {
     let isCurrent = true
@@ -120,8 +128,8 @@ export function AuthProvider({ children }: AuthProviderProps): ReactElement {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, register, login, completeOnboarding, skipOnboarding, requestPasswordReset, logout }),
-    [completeOnboarding, isLoading, login, logout, register, requestPasswordReset, skipOnboarding, user],
+    () => ({ user, isLoading, register, login, completeOnboarding, skipOnboarding, requestPasswordReset, logout, refreshUser }),
+    [completeOnboarding, isLoading, login, logout, refreshUser, register, requestPasswordReset, skipOnboarding, user],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

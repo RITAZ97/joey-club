@@ -4,6 +4,7 @@ export const resourceStatus = pgEnum('resource_status', ['candidate', 'source_li
 export const reviewDecision = pgEnum('review_decision', ['approved', 'rejected', 'needs_changes'])
 export const userOccupation = pgEnum('user_occupation', ['teacher', 'parent', 'other'])
 export const userYearLevel = pgEnum('user_year_level', ['0-3', '3-5'])
+export const creditTransactionReason = pgEnum('credit_transaction_reason', ['signup_grant', 'card_analysis', 'referral_bonus', 'purchase', 'admin_adjustment'])
 
 export const sources = pgTable(
   'sources',
@@ -137,6 +138,40 @@ export const passwordResetTokens = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('password_reset_tokens_token_hash_unique').on(table.tokenHash), index('password_reset_tokens_user_id_index').on(table.userId)],
+)
+
+/**
+ * One row per registration request that reaches the handler, keyed by IP.
+ * Used only to rate-limit account creation — see lib/rate-limit.ts.
+ */
+export const registrationAttempts = pgTable(
+  'registration_attempts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    ipAddress: text('ip_address').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('registration_attempts_ip_created_at_index').on(table.ipAddress, table.createdAt)],
+)
+
+/**
+ * A ledger, not a mutable counter: every grant and spend is its own row.
+ * A user's balance is the sum of their deltas. This keeps the door open for
+ * future earn/purchase mechanics (referrals, top-ups) without a schema
+ * change, and leaves an audit trail if usage ever looks abusive.
+ */
+export const creditTransactions = pgTable(
+  'credit_transactions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => userAccounts.id, { onDelete: 'cascade' }),
+    delta: integer('delta').notNull(),
+    reason: creditTransactionReason('reason').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('credit_transactions_user_id_index').on(table.userId)],
 )
 
 export type ResourceSource = typeof sources.$inferSelect

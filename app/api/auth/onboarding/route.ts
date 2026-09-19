@@ -36,9 +36,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         yearLevel: userAccounts.yearLevel,
         country: userAccounts.country,
         onboardingComplete: userAccounts.onboardingComplete,
+        emailVerifiedAt: userAccounts.emailVerifiedAt,
       })
     if (!user) return NextResponse.json({ error: 'We could not save your profile.' }, { status: 500 })
-    return NextResponse.json({ user: publicUser(user) })
+    return NextResponse.json({ user: await publicUser(user) })
   }
 
   const occupation = readString(payload, 'occupation') as Occupation
@@ -62,7 +63,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       yearLevel: userAccounts.yearLevel,
       country: userAccounts.country,
       onboardingComplete: userAccounts.onboardingComplete,
+      emailVerifiedAt: userAccounts.emailVerifiedAt,
     })
   if (!user) return NextResponse.json({ error: 'We could not save your profile.' }, { status: 500 })
-  return NextResponse.json({ user: publicUser(user) })
+  return NextResponse.json({ user: await publicUser(user) })
 }

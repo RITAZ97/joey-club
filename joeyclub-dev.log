@@ -2,4 +2,15 @@
 > my-project@0.1.0 dev
 > next dev --port 3001
 
-[?25h
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.33.103:3001
+- Environments: .env.local
+✓ Ready in 3.4s
+
+ GET /api/resources?q=Bugs%20in%20a%20Jar 200 in 595ms (next.js: 405ms, application-code: 190ms)
+ GET /api/resources?q=Early%20Learning%20Outdoors 200 in 53ms (next.js: 7ms, application-code: 46ms)
+ GET / 200 in 624ms (next.js: 244ms, application-code: 380ms)
+ GET /api/auth/session 200 in 270ms (next.js: 244ms, application-code: 26ms)
+ GET /api/resources?limit=50 200 in 414ms (next.js: 133ms, application-code: 281ms)
+ GET /api/resources?limit=50 200 in 65ms (next.js: 9ms, application-code: 56ms)

@@ -367,11 +367,14 @@ function hasSourceClassificationSignals(text: string): boolean {
 
 function inferActivityType(text: string): string {
   const value = text.toLowerCase()
-  if (/(song|dance|music|rhyme|movement)/.test(value)) return 'Music & Movement'
+  if (/(yoga|physical|gross motor|sport|active play|movement game|exercise|outdoor play)/.test(value)) return 'Outdoor & Physical Play'
+  if (/(video|audio|youtube|podcast)/.test(value)) return 'Music / Video'
+  if (/(science|stem|experiment|engineering|build)/.test(value)) return 'STEM'
+  if (/(art|craft|paint|drawing|printing|collage|making)/.test(value)) return 'Arts & Crafts'
   if (/(story|book|read|language|phonics)/.test(value)) return 'Literacy & Storytelling'
   if (/(garden|nature|outdoor|environment|recycl|sustainab)/.test(value)) return 'Outdoor & Physical Play'
-  if (/(sensory|playdough|messy|water play)/.test(value)) return 'Sensory & Messy Play'
-  if (/(science|stem|experiment|engineering|build)/.test(value)) return 'STEM'
+  if (/(sensory|playdough|messy|water play|fine motor)/.test(value)) return 'Sensory & Messy Play'
+  if (/(song|dance|music|rhyme|movement)/.test(value)) return 'Music / Video'
   return 'Arts & Crafts'
 }
 
@@ -384,7 +387,10 @@ function inferTopic(text: string): PlatformTopic {
 }
 
 function inferSetting(text: string): string {
-  return /(home|family|parent|carer|caregiver|one-to-one|individual)/i.test(text) ? 'Individual (1-on-1)' : 'Group'
+  const individual = /(home|family|parent|carer|caregiver|one-to-one|individual)/i.test(text)
+  const group = /(group|class|educator-led|whole group|small group)/i.test(text)
+  if (individual && group) return 'Flexible'
+  return individual ? 'Individual (1-on-1)' : 'Group'
 }
 
 function inferAgeStage(text: string): PlatformAgeStage {
@@ -394,7 +400,11 @@ function inferAgeStage(text: string): PlatformAgeStage {
 }
 
 function normaliseSetting(setting: string, supportingText: string): string {
-  if (/(individual|one-to-one|at-home|home|family|parent|carer|caregiver)/i.test(`${setting} ${supportingText}`)) {
+  const value = `${setting} ${supportingText}`
+  const individual = /(individual|one-to-one|at-home|home|family|parent|carer|caregiver)/i.test(value)
+  const group = /(group|class|educator-led|whole group|small group)/i.test(value)
+  if (individual && group) return 'Flexible'
+  if (individual) {
     return 'Individual (1-on-1)'
   }
   return 'Group'
@@ -622,7 +632,7 @@ export async function reviewAndStoreActivityUrl(inputUrl: string, input: SourceL
       const client = getVertexAiClient()
       const response = await client.models.generateContent({
         model: getReviewModel(),
-        contents: `Tag this exact early-childhood resource page using only the supplied public text. URL: ${normalizedUrl}\n\nPAGE TEXT:\n${preflight.text.slice(0, MAX_AI_PAGE_TEXT_CHARACTERS)}\n\nUse no assumptions. Preserve an EYLF outcome only if this exact text explicitly names it; otherwise set eylfOutcome to null. Standardise ageStage to exactly one of: "0 - 3 yrs (Babies & Toddlers)" or "3 - 5 yrs (Kinders & Preschoolers)". topic must be one of: "First Nations Culture", "Cultures & Festivals", "Sustainability & Nature", or "Social-Emotional Wellbeing".\n\nRespond with JSON only in this exact shape: {"title":"string","description":"string","ageStage":"0 - 3 yrs (Babies & Toddlers)|3 - 5 yrs (Kinders & Preschoolers)","setting":"string","activityType":"string","topic":"First Nations Culture|Cultures & Festivals|Sustainability & Nature|Social-Emotional Wellbeing","eylfOutcome":"string|null","learningArea":"string","format":"string","materials":["string"],"stepsSummary":"string","confidenceScore":0,"verdict":"approved|needs_review|rejected","reviewReason":"string"}.`,
+        contents: `Tag this exact early-childhood resource page using only the supplied public text. URL: ${normalizedUrl}\n\nPAGE TEXT:\n${preflight.text.slice(0, MAX_AI_PAGE_TEXT_CHARACTERS)}\n\nUse no assumptions. Preserve an EYLF outcome only if this exact text explicitly names it; otherwise set eylfOutcome to null. Standardise ageStage to exactly one of: "0 - 3 yrs (Babies & Toddlers)" or "3 - 5 yrs (Kinders & Preschoolers)". setting must be "Individual (1-on-1)", "Group", or "Flexible" (use Flexible only when both formats are clearly suitable). activityType must be exactly one of: "Arts & Crafts", "STEM", "Music / Video", "Literacy & Storytelling", "Sensory & Messy Play", or "Outdoor & Physical Play". Yoga, movement and gross-motor activities are "Outdoor & Physical Play"; video and audio resources are "Music / Video". topic must be one of: "First Nations Culture", "Cultures & Festivals", "Sustainability & Nature", or "Social-Emotional Wellbeing".\n\nRespond with JSON only in this exact shape: {"title":"string","description":"string","ageStage":"0 - 3 yrs (Babies & Toddlers)|3 - 5 yrs (Kinders & Preschoolers)","setting":"Individual (1-on-1)|Group|Flexible","activityType":"Arts & Crafts|STEM|Music / Video|Literacy & Storytelling|Sensory & Messy Play|Outdoor & Physical Play","topic":"First Nations Culture|Cultures & Festivals|Sustainability & Nature|Social-Emotional Wellbeing","eylfOutcome":"string|null","learningArea":"string","format":"string","materials":["string"],"stepsSummary":"string","confidenceScore":0,"verdict":"approved|needs_review|rejected","reviewReason":"string"}.`,
         config: { responseMimeType: 'application/json' },
       })
       review = parseReview(response.text ?? '')
@@ -646,7 +656,7 @@ export async function reviewAndStoreActivityUrl(inputUrl: string, input: SourceL
     canonicalUrl: normalizedUrl,
     ageStage: review.ageStage,
     setting: normaliseSetting(review.setting, `${review.title} ${review.description}`),
-    activityType: review.activityType,
+    activityType: inferActivityType(`${review.activityType} ${review.title} ${review.description} ${review.format}`),
     topic: review.topic,
     eylfOutcome: review.eylfOutcome,
     learningArea: review.learningArea,

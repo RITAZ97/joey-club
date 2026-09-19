@@ -2,6 +2,7 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from 'node:util'
 import { and, eq, gt } from 'drizzle-orm'
 import { cookies } from 'next/headers'
+import { getCreditBalance } from '@/lib/credits'
 import { getDb } from '@/lib/db'
 import { userAccounts, userSessions } from '@/lib/db/schema'
 
@@ -22,6 +23,8 @@ export interface AuthenticatedUser {
   yearLevel: YearLevel | null
   country: string | null
   onboardingComplete: boolean
+  credits: number
+  emailVerified: boolean
 }
 
 export const sessionCookieOptions = {
@@ -77,13 +80,16 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       yearLevel: userAccounts.yearLevel,
       country: userAccounts.country,
       onboardingComplete: userAccounts.onboardingComplete,
+      emailVerifiedAt: userAccounts.emailVerifiedAt,
     })
     .from(userSessions)
     .innerJoin(userAccounts, eq(userSessions.userId, userAccounts.id))
     .where(and(eq(userSessions.tokenHash, hashToken(token)), gt(userSessions.expiresAt, new Date())))
     .limit(1)
 
-  return result ?? null
+  if (!result) return null
+  const { emailVerifiedAt, ...rest } = result
+  return { ...rest, emailVerified: emailVerifiedAt !== null, credits: await getCreditBalance(result.id) }
 }
 
 export async function deleteCurrentSession(): Promise<void> {

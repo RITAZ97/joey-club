@@ -1,6 +1,7 @@
 import { and, eq, gt } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { hashToken } from '@/lib/auth/session'
+import { grantSignupCredits } from '@/lib/credits'
 import { getDb } from '@/lib/db'
 import { emailVerifications, userAccounts } from '@/lib/db/schema'
 
@@ -25,6 +26,9 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   await db.update(userAccounts).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(userAccounts.id, verification.userId))
   await db.delete(emailVerifications).where(eq(emailVerifications.id, verification.id))
+  // The verification row is single-use (deleted above), so this only ever
+  // runs once per account — safe to grant the beta credits here.
+  await grantSignupCredits(verification.userId)
   redirectUrl.searchParams.set('emailVerification', 'success')
   return NextResponse.redirect(redirectUrl)
 }

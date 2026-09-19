@@ -28,6 +28,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       yearLevel: userAccounts.yearLevel,
       country: userAccounts.country,
       onboardingComplete: userAccounts.onboardingComplete,
+      emailVerifiedAt: userAccounts.emailVerifiedAt,
     })
     .from(userAccounts)
     .where(eq(userAccounts.email, email))
@@ -40,5 +41,5 @@ export async function POST(request: Request): Promise<NextResponse> {
   const cookieStore = await cookies()
   cookieStore.set('joeyclub_session', token, sessionCookieOptions)
   const { passwordHash: _passwordHash, ...publicAccount } = user
-  return NextResponse.json({ user: publicUser(publicAccount) })
+  return NextResponse.json({ user: await publicUser(publicAccount) })
 }

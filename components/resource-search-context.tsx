@@ -1,16 +1,16 @@
 'use client'
 
 import { createContext, useContext, useMemo, useState, type ReactElement, type ReactNode } from 'react'
-import type { AgeStage, Setting } from '@/lib/resource-search'
+import type { CanonicalAgeStage } from '@/lib/resource-discovery'
 
-export type HeroAgeFilter = 'Any age' | AgeStage
-export type HeroGroupFilter = 'Any group size' | Setting
+export type HeroAgeFilter = CanonicalAgeStage
+export type HeroResourceScope = 'All resources' | 'Learning ideas' | 'Outings' | 'Venues'
 export type UserMode = 'parent' | 'educator'
 
 interface HeroSearchState {
   query: string
   age: HeroAgeFilter
-  group: HeroGroupFilter
+  scope: HeroResourceScope
 }
 
 interface ResourceSearchContextValue {
@@ -24,7 +24,7 @@ interface ResourceSearchProviderProps {
   children: ReactNode
 }
 
-const initialSearch: HeroSearchState = { query: '', age: 'Any age', group: 'Any group size' }
+const initialSearch: HeroSearchState = { query: '', age: 'All ages', scope: 'All resources' }
 const ResourceSearchContext = createContext<ResourceSearchContextValue | null>(null)
 
 export function ResourceSearchProvider({ children }: ResourceSearchProviderProps): ReactElement {

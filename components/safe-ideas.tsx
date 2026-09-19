@@ -2,9 +2,11 @@
 
 import Image from 'next/image'
 import { useState, type ReactElement } from 'react'
-import { Baby, ExternalLink, Heart, RefreshCw, ShieldCheck, Users } from 'lucide-react'
+import { ExternalLink, Heart, RefreshCw, ShieldCheck } from 'lucide-react'
 import { RESOURCE_SOURCE_WHITELIST, SEARCH_RESOURCES, type SearchResource } from '@/lib/resource-search'
+import { canonicalAgeStage } from '@/lib/resource-discovery'
 import { type ActivityCard, useSavedItems } from '@/components/saved-items'
+import { ResourceAgeMeta } from '@/components/resource-age-meta'
 
 const safeIdeaResourceIds = [
   'twinkl-identity-mind-map',
@@ -23,6 +25,15 @@ const safeIdeas = safeIdeaResourceIds
   .map((resourceId) => resourcesById.get(resourceId))
   .filter((resource): resource is SearchResource => resource !== undefined)
 const ideaGroups: SearchResource[][] = [safeIdeas.slice(0, 3), safeIdeas.slice(3, 6), safeIdeas.slice(6, 9)]
+
+const coverImageByActivityType: Record<string, string> = {
+  'Arts & Crafts': '/cards/activity-arts-crafts.png',
+  'STEM & Nature': '/cards/activity-stem-nature.png',
+  'Music / Video': '/cards/activity-music-video.png',
+  'Stories & Letters': '/cards/activity-stories-letters.png',
+  'Sensory & Messy Play': '/cards/activity-sensory-messy.png',
+  'Outdoor & Physical Play': '/cards/activity-outdoor-physical.png',
+}
 
 export function SafeIdeas(): ReactElement {
   const { isActivitySaved, toggleSaveActivity } = useSavedItems()
@@ -68,25 +79,40 @@ interface IdeaCardProps {
 
 function toSavedActivity(idea: SearchResource): ActivityCard {
   const match = idea.eylfOutcome?.match(/^Outcome\s+(\d)/)?.[1]
-  return { id: `resource-${idea.id}`, title: idea.title, description: idea.description, image: idea.image, sourceUrl: idea.sourceUrl, environment: /outdoor|physical|nature/i.test(`${idea.activityType} ${idea.topic}`) ? 'Outdoor' : 'Indoor', ageGroup: idea.ages === '0-3' ? 'Toddlers' : 'Pre-school', eylfOutcomes: match ? [`Outcome ${match}` as ActivityCard['eylfOutcomes'][number]] : [], tags: [idea.activityType, idea.topic] }
+  const activityType = displayActivityType(idea)
+  return { id: `resource-${idea.id}`, title: idea.title, description: idea.description, image: coverImageByActivityType[activityType] ?? idea.image, sourceUrl: idea.sourceUrl, environment: /outdoor|physical|nature/i.test(`${idea.activityType} ${idea.topic}`) ? 'Outdoor' : 'Indoor', ageGroup: canonicalAgeStage(idea.ageStage).startsWith('1') ? 'Toddlers' : 'Pre-school', eylfOutcomes: match ? [`Outcome ${match}` as ActivityCard['eylfOutcomes'][number]] : [], tags: [activityType, idea.topic] }
+}
+
+function displayActivityType(idea: SearchResource): string {
+  const value = `${idea.activityType} ${idea.title} ${idea.description} ${idea.format}`.toLowerCase()
+  if (/(yoga|physical|gross motor|sport|active play|movement game|exercise|outdoor play)/.test(value)) return 'Outdoor & Physical Play'
+  if (/(video|audio|youtube|podcast)/.test(value)) return 'Music / Video'
+  if (/(science|stem|experiment|engineering|math|build|discovery)/.test(value)) return 'STEM & Nature'
+  if (/(art|craft|paint|drawing|printing|collage|making)/.test(value)) return 'Arts & Crafts'
+  if (/(story|book|read|language|phonics|literacy)/.test(value)) return 'Stories & Letters'
+  if (/(sensory|playdough|messy|water play|fine motor)/.test(value)) return 'Sensory & Messy Play'
+  if (/(song|dance|music|rhyme|movement)/.test(value)) return 'Music / Video'
+  return 'Arts & Crafts'
 }
 
 function IdeaCard({ idea, saved, onToggle }: IdeaCardProps): ReactElement {
   const source = RESOURCE_SOURCE_WHITELIST[idea.source]
   const outcomeLabel = idea.eylfOutcome === undefined ? undefined : shortOutcome(idea.eylfOutcome)
+  const activityType = displayActivityType(idea)
+  const coverImage = coverImageByActivityType[activityType] ?? idea.image
 
   return (
     <article className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-[0_16px_36px_-28px_rgba(63,81,54,0.4)] sm:rounded-3xl sm:p-5 xl:flex xl:flex-col xl:px-4 xl:py-[21px]">
       <div className="grid shrink-0 grid-cols-[2fr_3fr] items-start gap-3 sm:gap-4 xl:gap-3">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-cream sm:rounded-2xl">
-          <Image src={idea.image} alt="" fill className="object-cover" />
+          <Image src={coverImage} alt="" fill className="object-cover" />
         </div>
         <div className="flex min-w-0 flex-col items-start justify-start xl:h-full">
           <h3 title={idea.title} className="w-full line-clamp-3 font-display text-[1rem] font-bold leading-tight text-brand-dark sm:text-[1.08rem] xl:line-clamp-2">
             {idea.title}
           </h3>
           <div className="mt-1 hidden w-full flex-wrap items-start gap-1 xl:flex">
-            <span className="inline-flex max-w-full items-center rounded-full bg-badge-green px-2 py-1 text-[0.64rem] font-semibold text-badge-green-foreground sm:px-2.5 sm:text-[0.68rem]"><span className="truncate">{idea.activityType}</span></span>
+            <span className="inline-flex max-w-full items-center rounded-full bg-badge-green px-2 py-1 text-[0.64rem] font-semibold text-badge-green-foreground sm:px-2.5 sm:text-[0.68rem]"><span className="truncate">{activityType}</span></span>
             {outcomeLabel !== undefined && <span className="inline-flex max-w-full items-center rounded-full bg-badge-yellow px-2 py-1 text-[0.64rem] font-semibold text-badge-yellow-foreground sm:px-2.5 sm:text-[0.68rem]"><span className="truncate">{outcomeLabel}</span></span>}
           </div>
         </div>
@@ -96,7 +122,7 @@ function IdeaCard({ idea, saved, onToggle }: IdeaCardProps): ReactElement {
         {idea.description}
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2 xl:hidden">
-        <span className="inline-flex rounded-full bg-badge-green px-2.5 py-1 text-[0.7rem] font-semibold text-badge-green-foreground">{idea.activityType}</span>
+        <span className="inline-flex rounded-full bg-badge-green px-2.5 py-1 text-[0.7rem] font-semibold text-badge-green-foreground">{activityType}</span>
         {idea.eylfOutcome !== undefined && <span className="inline-flex rounded-full bg-badge-yellow px-2.5 py-1 text-[0.7rem] font-semibold text-badge-yellow-foreground">{shortOutcome(idea.eylfOutcome)}</span>}
       </div>
 
@@ -116,14 +142,9 @@ function IdeaCard({ idea, saved, onToggle }: IdeaCardProps): ReactElement {
         <button type="button" onClick={onToggle} aria-label={saved ? 'Unsave activity' : 'Save activity'} aria-pressed={saved} className="ml-auto inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-primary hover:bg-muted"><Heart className={`size-4 ${saved ? 'fill-primary' : ''}`} /></button>
       </div>
 
-      <div className="mt-2 grid shrink-0 grid-cols-[.85fr_.9fr_1.25fr] gap-1 border-t border-border pt-2 text-[0.74rem] font-semibold text-foreground/80 sm:gap-1.5 sm:text-[0.8rem] xl:grid-cols-3 xl:gap-1.5 xl:text-[0.68rem]">
+      <div className="mt-2 grid shrink-0 grid-cols-2 gap-1 border-t border-border pt-2 text-[0.74rem] font-semibold text-foreground/80 sm:gap-1.5 sm:text-[0.8rem] xl:gap-1.5 xl:text-[0.68rem]">
         <span className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-1 py-1 text-center xl:border xl:border-border xl:px-1.5">
-          <Baby className="size-4 text-muted-foreground xl:size-3.5" aria-hidden />
-          {idea.ages} yrs
-        </span>
-        <span className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-1 py-1 text-center xl:border xl:border-border xl:px-1.5">
-          <Users className="size-3.5 text-muted-foreground" aria-hidden />
-          {settingLabel(idea.setting)}
+          <ResourceAgeMeta age={idea.ageStage} compact />
         </span>
         <span className="inline-flex w-full items-center justify-center gap-1 whitespace-nowrap rounded-full px-1 py-1 text-center xl:gap-1.5 xl:border xl:border-border xl:px-1.5">
           <ShieldCheck className="size-3.5 text-primary" aria-hidden />
@@ -132,10 +153,6 @@ function IdeaCard({ idea, saved, onToggle }: IdeaCardProps): ReactElement {
       </div>
     </article>
   )
-}
-
-function settingLabel(setting: SearchResource['setting']): string {
-  return setting === 'Individual (1-on-1)' ? 'Individual' : 'Group'
 }
 
 function shortOutcome(outcome: string): string {

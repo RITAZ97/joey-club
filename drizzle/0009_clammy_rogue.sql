@@ -1,0 +1,7 @@
+CREATE TABLE "registration_attempts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"ip_address" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX "registration_attempts_ip_created_at_index" ON "registration_attempts" USING btree ("ip_address","created_at");

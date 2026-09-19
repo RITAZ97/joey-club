@@ -16,8 +16,8 @@ export const RESOURCE_SOURCE_WHITELIST = {
 } as const
 
 export type WhitelistedSourceId = keyof typeof RESOURCE_SOURCE_WHITELIST
-export type AgeStage = '0 - 3 yrs (Babies & Toddlers)' | '3 - 5 yrs (Kinders & Preschoolers)'
-export type Setting = 'Individual (1-on-1)' | 'Group'
+export type AgeStage = '0 - 3 yrs (Babies & Toddlers)' | '1 - 3 yrs (Toddlers)' | '3 - 5 yrs (Kinders & Preschoolers)' | 'All ages'
+export type Setting = 'Individual (1-on-1)' | 'Group' | 'Flexible'
 export type ActivityType = string
 export type Topic = string
 export type EylfOutcome = string

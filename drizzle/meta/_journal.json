@@ -57,6 +57,20 @@
       "when": 1787241600000,
       "tag": "0007_user_state_territory",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789803882370,
+      "tag": "0008_bitter_tomas",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789812266072,
+      "tag": "0009_clammy_rogue",
+      "breakpoints": true
     }
   ]
 }
